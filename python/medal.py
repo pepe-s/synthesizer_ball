@@ -9,6 +9,7 @@ SensorMedal Class
 from bluepy.btle import Peripheral
 import bluepy.btle as btle
 import binascii
+from threading import Thread, Event
 
 # 16
 def s16(val):
@@ -19,6 +20,7 @@ class SensorMedal(Peripheral):
     def __init__(self, addr):
         Peripheral.__init__(self, addr, addrType="random")
         self.result = 1
+        self.stop_event = Event()
         
         self.accel_x = 0.0
         self.accel_y = 0.0
@@ -95,13 +97,21 @@ class SensorMedal(Peripheral):
 
                 datas = self.splitData(binascii.b2a_hex(data))
                 self.setDatas(datas)
-                # self.printData()
                 
                 if self.delegate is not None:
                     self.delegate.handleNotification(hnd, data)
                 if respType not in wantType:
                     continue
             return resp
+        
+    # getData loop
+    def getDataSpin(self, timeout):
+        while not self.stop_event.is_set():
+            if self.waitForNotifications(timeout):
+                continue
+        self.stop_event.clear()
 
-    
-
+    def getData(self, timeout=1.0):
+        th = Thread(target=self.getDataSpin, args=(timeout,))
+        th.setDaemon(True)
+        th.start()

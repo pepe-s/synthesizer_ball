@@ -1,4 +1,4 @@
-﻿# synthesizer_ball
+# synthesizer_ball
 シンセサイザーボールのプロジェクト
 
 ◾ mozziの使用方法
@@ -16,7 +16,10 @@
 　・必要モジュール
 　　以下の記事を元にbluepyをインストール
 　　http://tomosoft.jp/design/?p=8104
-
-　　sudo python medal.py　で実行
-    ※もしbtleが見つからないと言われたらbluepyの
-    　ディレクトリにmedal.pyを入れて実行する
+　　
+　　python medal.py　で実行
+	
+◾︎音楽データについて
+　・SEフォルダ内のテキストファイルに記載されているURLから
+　　指定のファイルをダウンロードしてくる
+　・mp3形式のものはwavファイルに変換する

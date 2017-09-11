@@ -11,6 +11,8 @@ from pygame import mixer
 import random
 import medal
 
+from sound import Game, SoundSE
+
 
 ROHM_RAW = "E3:B0:C8:8F:A1:22"
 SE_BOUND = "../SE/byun.wav"
@@ -24,46 +26,6 @@ SLEEP_SEC = 0.1
 mode = 2
 
 
-class Game():
-    def __init__(self):
-        self.bgm = []
-        self.bgm.append(mixer.Sound(BGM_GAME1))
-        self.bgm.append(mixer.Sound(BGM_GAME2))
-        self.bgmstart = mixer.Sound(BGM_START)
-        self.bgmstop = mixer.Sound(BGM_STOP)
-        self.gaming = False
-        self.time_start = 0.0
-        self.time_limit = 0.0
-        self.bgmnum = 0
-
-    def gameStart(self):
-        self.bgmnum = random.randint(0,1)
-        self.gaming = True
-
-        self.bgmstart.play()
-        sleep(1)
-        self.bgm[self.bgmnum].play()
-        
-        self.time_limit = self.makeTime()
-        self.time_start = time()
-        print "Game start!! (%d sec)" % self.time_limit
-
-    def gameStop(self):
-        print "Game stop"
-        self.gaming = False
-        self.bgm[self.bgmnum].stop()
-        sleep(0.1)
-        self.bgmstop.play()
-        sleep(1)
-    
-    def makeTime(self):
-        return random.uniform(20,80)
-
-    def isLimit(self):
-        t = time() - self.time_start
-        return self.time_limit < t
-        
-        
 # main program
 def main():
     try:

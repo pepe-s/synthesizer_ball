@@ -5,13 +5,10 @@
 
 """
 
-import PWM
 import traceback
-import WaitLed
-import WaitRing
-import RunRing
 from time import sleep
 from threading import Thread, Event
+from LEDctl import PWM, WaitLed, WaitRing, RunRing
 import medal
 from pygame import mixer
 from sound import Game, SoundSE
@@ -19,7 +16,7 @@ from sound import Game, SoundSE
 ROHM_RAW = "D1:D7:7E:49:81:20"
 SLEEP_SEC = 0.1
 
-mode = 2
+mode = 1
 
 
 # main program

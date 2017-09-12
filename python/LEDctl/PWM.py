@@ -2,24 +2,24 @@
 # -*- coding: utf-8 -*-
 
 import time
+import signal
 import os
 import RPi.GPIO as GPIO
 from threading import Thread, Event
 import spidev
 
+GPIO17 = 17 
+GPIO22 = 22
+GPIO23 = 23
+
 class FullColorLED():
-    def __init__(self):
-        self.result = 1
+    def __init__(self, stand):
         self.stop_event = Event()
-        
-        self.spi = spidev.SpiDev()
-        self.spi.open(0, 0)
+        self.th = None
+        signal.signal(signal.SIGINT, self.sigStop)
+        self.stand = stand
         
         GPIO.setmode(GPIO.BCM)
-
-        GPIO17 = 17 
-        GPIO22 = 22
-        GPIO23 = 23
         
         GPIO.setup(GPIO17, GPIO.OUT)
         GPIO.setup(GPIO22, GPIO.OUT)
@@ -32,15 +32,6 @@ class FullColorLED():
         self.GREEN.start(0)
         self.RED.start(0)
         self.BLUE.start(0)
-        
-        self.vol1 = 0
-        self.vol2 = 0
-
-    def voltageToTemperature(self, volt):
-        offset = (0.6 / 5) * 1024
-        base_temp = 5 / 1024.0
-
-        return (float)(volt - offset) * base_temp * 100.0
 
     def baseColor(self,val):
         # Green
@@ -95,56 +86,51 @@ class FullColorLED():
             self.BLUE.ChangeDutyCycle(dc)
             self.RED.ChangeDutyCycle(dc)
             self.GREEN.ChangeDutyCycle(dc)
-            
+    
+    def blightED(self, color):
+        for dc in range(100, -1, -10):
+            self.changeColor(color,dc)
+            time.sleep(0.05)
+
+    def fadeLED(self, color):
+        for dc in range(0, 101, 10):
+            self.changeColor(color,dc)
+            time.sleep(0.05)
+
     def FlashLedPWM(self,color):
-        try:
-            while not self.stop_event.is_set():
-                
-                # ch0
-                resp = self.spi.xfer2([0x68, 0x00])
-                self.vol1 = (resp[0]*256+resp[1]) & 0x3ff
-                #print self.vol1
-                if self.vol1 > 900:
-                    color = 3
-                elif self.vol1 < 100:
-                    color = 4
-                else:
-                    color = 1
-                    
-                # ch1
-                #resp = self.spi.xfer2([0x78, 0x00])
-                #self.vol2 = (resp[0]*256+resp[1]) & 0x3ff
-                #print self.vol2
-                
-                self.baseColor(color)
-                
-                for dc in range(100, -1, -10):
-                    self.changeColor(color,dc)
-                    time.sleep(0.1)
-                    
-                time.sleep(0.2)
-                
-                for dc in range(0, 101, 10):
-                    self.changeColor(color,dc)
-                    time.sleep(0.1)
+        while not self.stop_event.is_set():
+            if self.stand.mode == 0:
+                color = 1
+            elif self.stand.mode == 1:
+                color = 3
+            elif self.stand.mode == 2:
+                color = 4
+            else:
+                color = 2
 
-        except KeyboardInterrupt:
-            pass
+            self.baseColor(color)
+            
+            self.blightED(color)
+            time.sleep(0.2)
+            self.fadeLED(color)
 
-        self.stopColor()
+    def run(self, color=2):
+        self.th = Thread(target=self.FlashLedPWM, args=(color,))
+        self.th.setDaemon(True)
+        self.th.start()
 
-        self.stop_event.clear()
-
-    def setColor(self, color=2):
-        th = Thread(target=self.FlashLedPWM, args=(color,))
-        th.setDaemon(True)
-        th.start()
-
-
-    def stopColor(self):
+    def stop(self):
+        print "full color led stop"
+        self.stop_event.set()
+        if not self.th is None:
+            self.th.join(0.5)
+            print "full color led thread stopped"
+        
         self.GREEN.stop()
         self.RED.stop()
         self.BLUE.stop()
-
         GPIO.cleanup()
-        self.spi.close()
+
+
+    def sigStop(self, signum, frame):
+        self.stop()

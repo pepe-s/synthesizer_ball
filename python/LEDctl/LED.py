@@ -1,23 +1,32 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import time
-import signal
-import os
+from time import sleep
 import RPi.GPIO as GPIO
 from threading import Thread, Event
-import spidev
+from neopixel import *
 
+# for FullColorLED
 GPIO17 = 17 
 GPIO22 = 22
 GPIO23 = 23
+
+# for Ring LED
+LEDS        = 12     # Aantel LEDS
+PIN         = 18     # GPIO 18 / PIN 12
+BRIGHTNESS  = 200     # min 0 / max 255
+
+KLEUR_R     = 255
+KLEUR_G     = 255
+KLEUR_B     = 255
+RING_WAIT = 1.0
 
 class FullColorLED():
     def __init__(self, stand):
         self.stop_event = Event()
         self.th = None
-        signal.signal(signal.SIGINT, self.sigStop)
-        self.stand = stand
+        self.stand = stand      # BallStand instance
+        self.standby = True     # standby mode
         
         GPIO.setmode(GPIO.BCM)
         
@@ -90,32 +99,35 @@ class FullColorLED():
     def blightED(self, color):
         for dc in range(100, -1, -10):
             self.changeColor(color,dc)
-            time.sleep(0.05)
+            sleep(0.05)
 
     def fadeLED(self, color):
         for dc in range(0, 101, 10):
             self.changeColor(color,dc)
-            time.sleep(0.05)
+            sleep(0.05)
 
-    def FlashLedPWM(self,color):
+    def spin(self):
         while not self.stop_event.is_set():
-            if self.stand.mode == 0:
-                color = 1
-            elif self.stand.mode == 1:
-                color = 3
-            elif self.stand.mode == 2:
-                color = 4
-            else:
+            if self.standby:
                 color = 2
+            else:
+                if self.stand.mode == 0:
+                    color = 1
+                elif self.stand.mode == 1:
+                    color = 3
+                elif self.stand.mode == 2:
+                    color = 4
+                else:
+                    color = 2
 
             self.baseColor(color)
             
             self.blightED(color)
-            time.sleep(0.2)
+            sleep(0.1)
             self.fadeLED(color)
 
-    def run(self, color=2):
-        self.th = Thread(target=self.FlashLedPWM, args=(color,))
+    def run(self):
+        self.th = Thread(target=self.spin)
         self.th.setDaemon(True)
         self.th.start()
 
@@ -131,6 +143,56 @@ class FullColorLED():
         self.BLUE.stop()
         GPIO.cleanup()
 
+class RingLED():
+    def __init__(self, stand):
+        self.stop_event = Event()
+        self.th = None
+        self.stand = stand  # BallStand instance(read only)
 
-    def sigStop(self, signum, frame):
-        self.stop()
+        self.ring = Adafruit_NeoPixel(LEDS, PIN, 800000, 5, False, BRIGHTNESS)
+        self.ring.begin()
+
+        self.standby = True
+
+    def blightLED(self, color):
+        for i in range(self.ring.numPixels()):
+            self.ring.setPixelColor(i,color)
+            self.ring.show()
+            sleep(RING_WAIT)
+            self.ring.setPixelColor(i,0)
+
+    def resetLeds(self):
+        for i in range(self.ring.numPixels()):
+            self.ring.setPixelColor(i, Color(0,0,0))
+            self.ring.show()
+
+    def spin(self):
+        while not self.stop_event.is_set():
+
+            if self.standby:
+                color = Color(255,0,0)
+            else:
+                if self.stand.mode == 0:
+                    color = Color(0, 0, 255)
+                elif self.stand.mode == 1:
+                    color = Color(255, 255, 0)
+                elif self.stand.mode == 2:
+                    color = Color(0, 255, 0)
+                else:
+                    color = Color(255, 0, 0)
+            
+            self.blightLED(color)
+                
+        self.resetLeds()
+
+    def run(self):
+        self.th = Thread(target=self.spin)
+        self.th.setDaemon(True)
+        self.th.start()
+        
+    def stop(self):
+        print "Ring led stop"
+        self.stop_event.set()
+        if not self.th is None:
+            self.th.join(0.5)
+            print "Ring LED thread stopped"

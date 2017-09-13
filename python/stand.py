@@ -8,14 +8,12 @@
 from time import sleep
 from threading import Thread, Event
 import spidev
-import signal
 
 
 class BallStand():
     def __init__(self):
         self.stop_event = Event()
         self.th = None
-        signal.signal(signal.SIGINT, self.sigStop)
         self.spi = spidev.SpiDev()
         self.spi.open(0, 0)
         
@@ -24,19 +22,21 @@ class BallStand():
         self.mode = 0
 
     def setMode(self):
-        if self.volume_mode > 900:
+        interval = 250
+        if self.volume_mode < (interval * 1):
             self.mode = 0
-        elif self.volume_mode < 100:
+        elif self.volume_mode < (interval * 2):
             self.mode = 1
-        else:
+        elif self.volume_mode < (interval * 3):
             self.mode = 2
+        else:
+            self.mode = 3
 
     def spin(self):
         while not self.stop_event.is_set():
             resp = self.spi.xfer2([0x68, 0x00])
             self.volume_mode = (resp[0]*256+resp[1]) & 0x3ff
             self.setMode()
-            print self.volume_mode
             sleep(0.2)
 
     def run(self):
@@ -51,6 +51,3 @@ class BallStand():
         if not self.th is None:
             self.th.join(0.5)
             print "ball stand thread is stopped"
-
-    def sigStop(self, signum, frame):
-        self.stop()

@@ -15,13 +15,14 @@ from threading import Thread, Event
 def s16(val):
     return -(val & 0b1000000000000000) | (val & 0b0111111111111111)
         
-        
+
 class SensorMedal(Peripheral):
     def __init__(self, addr):
         Peripheral.__init__(self, addr, addrType="random")
-        self.result = 1
+
         self.stop_event = Event()
-        
+        self.th = None
+
         self.accel_x = 0.0
         self.accel_y = 0.0
         self.accel_z = 0.0
@@ -112,6 +113,14 @@ class SensorMedal(Peripheral):
         self.stop_event.clear()
 
     def getData(self, timeout=1.0):
-        th = Thread(target=self.getDataSpin, args=(timeout,))
-        th.setDaemon(True)
-        th.start()
+        self.writeCharacteristic(0x0b07, "\x01\x00", True)
+        self.th = Thread(target=self.getDataSpin, args=(timeout,))
+        self.th.setDaemon(True)
+        self.th.start()
+
+    def stop(self):
+        print "sensor medal getData stop"
+        self.stop_event.set()
+        if not self.th is None:
+            self.th.join(0.5)
+            print "sensor medal thread stopped"

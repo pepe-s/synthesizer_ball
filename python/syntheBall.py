@@ -13,6 +13,7 @@ from stand import BallStand
 from LEDctl.LED import FullColorLED
 import medal
 from sound import Game, SoundPlayer
+from motion import MotionDetecter
 
 ROHM_RAW = "D1:D7:7E:49:81:20"
 SLEEP_SEC = 0.1
@@ -40,6 +41,11 @@ def main():
         sm = medal.SensorMedal(ROHM_RAW)
         sm.getData()
         print "sensor medal run"
+
+        # motion detect
+        m = MotionDetecter(sm)
+        m.run()
+        print "motion run"
 
         # start LED color change 
         led.standby = False
@@ -82,15 +88,15 @@ def main():
                 sleep(SLEEP_SEC)
 
             elif stand.mode == 2:
-                # motion mode
-                # if m.motion == 1:
-                #     se.playSE("roll")
-                # elif m.motion == 2:
-                #     se.playMotion("hyaa", 1.2)
-                # elif m.motion == 3:
-                #     se.playMotion("kyaa", 1.5)
-                # elif m.motion == 4:
-                #     se.playMotion("gyaa", 2.0)
+                motion mode
+                if m.motion == 1:
+                    se.playSE("roll")
+                elif m.motion == 2:
+                    se.playMotion("hyaa", 1.2)
+                elif m.motion == 3:
+                    se.playMotion("kyaa", 1.5)
+                elif m.motion == 4:
+                    se.playMotion("gyaa", 2.0)
                 sleep(0.15)
 
             elif stand.mode == 3:
@@ -119,6 +125,9 @@ def main():
             game.gameStop()
         mixer.quit()
         
+        if not m is None:
+            m.stop()
+
         if not led is None:
             led.stop()
             print "led is stopped"

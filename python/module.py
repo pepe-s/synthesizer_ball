@@ -26,7 +26,6 @@ class Module():
 
     def stop(self):
         self.stop_event.set()
-        self.spi.close()
         print "%s stop" % self.name
         if not self.th is None:
             self.th.join()
